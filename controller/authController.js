@@ -7,10 +7,10 @@ require('dotenv').config();
 
 // Register
 exports.register = async (req, res) => {
-    const { user_name, password } = req.body;
+    const { user_name, password,name,role } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ user_name, password: hashedPassword });
+        const user = new User({ user_name, password: hashedPassword,name,role });
         await user.save();
         res.status(201).send("User registered");
     } catch (err) {
@@ -22,12 +22,12 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     const { user_name, password } = req.body;
     try {
-        const tmpuser = await User.findOne({ user_name });
-        if (!tmpuser) return res.status(400).send("User not found");
-        const isMatch = await bcrypt.compare(password, tmpuser.password);
+        const user = await User.findOne({ user_name });
+        if (!user) return res.status(400).send("User not found");
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).send("Invalid credentials");
-
-        const user = await User.findOne({user_name}).select("-password");
+        const role = await(user.role);
+        if (!role) return res.status(400).send("Role not found");
 
         const accessToken = jwt.sign(
             { userId: user._id },
@@ -39,9 +39,9 @@ exports.login = async (req, res) => {
             { userId: user._id },
             process.env.PEFRESH_TOKEN_SECRET
         );
-        return res.json({user, accessToken, refreshToken });
+        res.json({ user, accessToken, refreshToken ,role});
     } catch (err) {
-        return res.status(500).send(err.message);
+        res.status(500).send(err.message);
     }
 };
 
